@@ -1,4 +1,5 @@
 import functools
+import os
 from click import File
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 import motor.motor_asyncio
@@ -14,8 +15,9 @@ app = FastAPI()
 @functools.lru_cache()
 def mongo_data_collection():
     client = motor.motor_asyncio.AsyncIOMotorClient(
-        "mongodb://root:example@localhost:27017"
+        os.getenv("MONGO_URL", "mongodb://root:example@localhost:27017")
     )
+    print(os.getenv("MONGO_URL"))
     db=client["data"]
     collection = db["verdicts"]
     return collection
@@ -36,8 +38,6 @@ async def verifyEvent(event: EventModel, mongo_collection=Depends(mongo_data_col
     process = HashVerdict(hash=event.last_access.hash, risk_level=process_risk_level)
     
     verdict = EventResponse(file=file, process=process)
-
-    print(mongo_collection)
     return verdict
 
 @app.post("/scan_file")
@@ -66,4 +66,4 @@ async def write_to_mongo(save_data: HashVerdict, mongo_collection):
     return "Item created, hash:{}, risk_level={}".format(save_data.hash, save_data.risk_level)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
